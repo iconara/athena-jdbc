@@ -1,16 +1,38 @@
 package io.burt.athena;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class AthenaDatabaseMetaData implements DatabaseMetaData {
     private final Connection connection;
+    private final String driverVersion;
+    private final int driverMajorVersion;
+    private final int driverMinorVersion;
 
     AthenaDatabaseMetaData(Connection connection) {
         this.connection = connection;
+        final Properties properties = new Properties();
+        try {
+            properties.load(AthenaDatabaseMetaData.class.getClassLoader().getResourceAsStream("project.properties"));
+        } catch (IOException e) {
+            throw new RuntimeException("Could not load driver version: " + e.getMessage(), e);
+        }
+        driverVersion = properties.getProperty("project.version");
+        final Pattern versionComponentsPattern = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)(?:-\\w+)?");
+        final Matcher matcher = versionComponentsPattern.matcher(driverVersion);
+        if (matcher.matches()) {
+            driverMajorVersion = Integer.parseInt(matcher.group(1));
+            driverMinorVersion = Integer.parseInt(matcher.group(2));
+        } else {
+            throw new RuntimeException("Could not parse driver version: " + driverVersion);
+        }
     }
 
     @Override
@@ -39,17 +61,17 @@ class AthenaDatabaseMetaData implements DatabaseMetaData {
 
     @Override
     public String getDriverVersion() {
-        return "0.2.0";
+        return driverVersion;
     }
 
     @Override
     public int getDriverMajorVersion() {
-        return 0;
+        return driverMajorVersion;
     }
 
     @Override
     public int getDriverMinorVersion() {
-        return 2;
+        return driverMinorVersion;
     }
 
     @Override
